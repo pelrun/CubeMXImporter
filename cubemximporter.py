@@ -22,7 +22,7 @@
 
 from __future__ import print_function
 
-version = '0.2.1' # using semantic versioning 2.0 model, denote a patch change
+version = '0.3.0' # using semantic versioning 2.0 model,  added functionality to 0.2.1 in a backwards-compatible manner.
 
 import os
 import argparse
@@ -30,6 +30,9 @@ import copy
 import logging
 import shutil
 import re
+import configparser
+import tkinter as tk
+from tkinter import filedialog
 from lxml import etree
 
 
@@ -40,13 +43,15 @@ class CubeMXImporter(object):
         super(CubeMXImporter, self).__init__()
 
         self.eclipseprojectpath = ""
+        self.cubemxprojectpath = ""
         self.dryrun = 0
         self.logger = logging.getLogger(__name__)
         self.HAL_TYPE = None
+        self.iniFile=os.path.join(os.path.expanduser('~'),'cubemximporter.ini')
+        self.readUserConfiguration()
 
     def setCubeMXProjectPath(self, path):
         """Set the path of CubeMX generated project folder"""
-
         if os.path.exists(os.path.join(path, ".mxproject")):
             if os.path.exists(os.path.join(path, "SW4STM32")):  # For CubeMX < 4.14
                 self.cubemxprojectpath = path
@@ -81,7 +86,6 @@ class CubeMXImporter(object):
 
     def setEclipseProjectPath(self, path):
         """Set the path of Eclipse generated project folder"""
-
         if os.path.exists(os.path.join(path, ".cproject")):
             self.eclipseprojectpath = path
         else:
@@ -476,14 +480,61 @@ exclude from build those uneeded codepage files (cc932.c, etc) not needed for yo
                             fout.write(line)
             os.remove(filename_in)
             os.rename(filename_out, filename_in)
-
+    
+    def createUserConfiguration(self):
+        """Create INI File configuration"""
+        self.config['eclipse'] = {'LastEclipseProjectPath':'','LastEclipseProjectDir':''}
+        self.config['cubemx'] = {'LastMXProjectPath':'', 'LastMXProjectDir':''}
+        
+        with open(self.iniFile, 'w') as configfile:
+            self.config.write(configfile)
+        
+    def readUserConfiguration(self):
+        """Read INI file configuration"""
+        self.config = configparser.ConfigParser()
+        if not (os.path.isfile(self.iniFile)): self.createUserConfiguration()
+        self.config.read(self.iniFile)
+        self.cfg_eclipse_lastpath = self.config['eclipse']['LastEclipseProjectPath']
+        self.cfg_cubemx_lastpath = self.config['cubemx']['LastMXProjectPath']
+        self.cfg_eclipse_lastdir = self.config['eclipse']['LastEclipseProjectDir']
+        self.cfg_cubemx_lastdir = self.config['cubemx']['LastMXProjectDir']
+        
+    def writeUserConfiguration(self):
+        """Write INI file confioguration"""
+        self.cfg_eclipse_lastpath = self.config['eclipse']['LastEclipseProjectPath'] = self.eclipseProjectPath;
+        self.cfg_cubemx_lastpath = self.config['cubemx']['LastMXProjectPath'] = self.cubeMXProjectPath;
+        self.cfg_eclipse_lastdir = self.config['eclipse']['LastEclipseProjectDir'] = os.path.dirname(self.eclipseProjectPath);
+        self.cfg_cubemx_lastdir = self.config['cubemx']['LastMXProjectDir'] = os.path.dirname(self.cubeMXProjectPath);
+        with open(self.iniFile, 'w') as configfile: self.config.write(configfile)
+            
+    def askDirectoryPathIfInvalid(self, direc, path, t=''):
+        """If specified directory  path exists, just return it ; otherwise open dialog and prompt for it"""
+        if path=='' or (not os.path.isdir(path)): 
+            root = tk.Tk()
+            root.withdraw()
+            dir_opt = {}
+            dir_opt['initialdir'] = self.strOrDefault(direc,'.')
+            dir_opt['title'] = t
+            dir_opt['mustexist'] = True
+            path = filedialog.askdirectory(**dir_opt)
+        return path
+    
+    def resolveDirectoryPath(self, direc, path):
+        """Return an empty string if dir not found or a resolved path otherwise"""
+        p = self.strOrDefault(path, '')
+        if (p!='' and not os.path.isdir(p)): p= os.path.join(direc, p)
+        if not os.path.isdir(p): p=''
+        return p;
+            
+    def strOrDefault(self, s, default_s):
+        """Return the default_s if str is None or empty, or s otherwise"""
+        return default_s if (s is None or s=='')  else str(s)
+   
 class InvalidCubeMXFolder(Exception):
     pass
 
-
 class InvalidEclipseFolder(Exception):
     pass
-
 
 class InvalidSW4STM32Project(Exception):
     pass
@@ -493,11 +544,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Import a CubeMX generated project inside an existing Eclipse project generated with the GNU ARM plugin')
 
-    parser.add_argument('eclipse_path', metavar='eclipse_dest_prj_path', type=str,
+    parser.add_argument('epath', nargs='?',default='', action='store', metavar='eclipse_dst_prj_path', type=str,
                         help='eclipse destination project path')
-
-    parser.add_argument('cubemx_path', metavar='cubemx_src_prj_path', type=str,
-                        help='cube_mx source project path')
+    parser.add_argument('cpath', nargs='?',default='', action='store', metavar='cubemx_dest_prj_path', type=str,
+                        help='cubemx destination project path')
 
     parser.add_argument('-v', '--verbose', type=int, action='store',
                         help='Verbose level')
@@ -516,8 +566,16 @@ if __name__ == "__main__":
 
     cubeImporter = CubeMXImporter()
     cubeImporter.setDryRun(args.dryrun)
-    cubeImporter.eclipseProjectPath = args.eclipse_path
-    cubeImporter.cubeMXProjectPath = args.cubemx_path
+    
+    # Smart paths resolving, tries first to find dir name 
+	# (can also expand a relative dir to previous dir path if exist)
+    # Finally, if dir is still not found ; then a dialog prompts for it.
+    cubeImporter.eclipseProjectPath = cubeImporter.askDirectoryPathIfInvalid(cubeImporter.cfg_eclipse_lastpath, 
+        cubeImporter.resolveDirectoryPath(cubeImporter.cfg_eclipse_lastdir, args.epath), 'Select an eclipse cproject path')
+    cubeImporter.cubeMXProjectPath = cubeImporter.askDirectoryPathIfInvalid(cubeImporter.cfg_cubemx_lastpath,
+        cubeImporter.resolveDirectoryPath(cubeImporter.cfg_cubemx_lastdir, args.cpath), 'Select a CubeMX project path')
+    cubeImporter.writeUserConfiguration()  # if at that point we write config as no error was found, 
+                                # so that user can reuse dir path or relative dir name later
     cubeImporter.parseEclipseProjectFile()
     cubeImporter.deleteOriginalEclipseProjectFiles()
     cubeImporter.importApplication()
