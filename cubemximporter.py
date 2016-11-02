@@ -31,8 +31,22 @@ import logging
 import shutil
 import re
 import configparser
-import tkinter as tk
-from tkinter import filedialog
+import sys
+
+# Compatible dialog code for both python 2.x and 3.x
+if sys.version_info >= (3, 0):
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+    except ImportError:
+        raise ImportError('FileDialog module missing. Check your Py3 tkinter installation.')
+else:
+    try:
+        import Tkinter  as tk
+        import tkFileDialog as filedialog
+    except ImportError:
+        raise ImportError('FileDialog module missing. Check your Py3 tkinter installation.')
+    
 from lxml import etree
 
 
@@ -568,7 +582,7 @@ if __name__ == "__main__":
     cubeImporter.setDryRun(args.dryrun)
     
     # Smart paths resolving, tries first to find dir name 
-	# (can also expand a relative dir to previous dir path if exist)
+    # (can also expand a relative dir to previous dir path if exist)
     # Finally, if dir is still not found ; then a dialog prompts for it.
     cubeImporter.eclipseProjectPath = cubeImporter.askDirectoryPathIfInvalid(cubeImporter.cfg_eclipse_lastpath, 
         cubeImporter.resolveDirectoryPath(cubeImporter.cfg_eclipse_lastdir, args.epath), 'Select an eclipse cproject path')
