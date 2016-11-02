@@ -45,7 +45,7 @@ else:
         import Tkinter  as tk
         import tkFileDialog as filedialog
     except ImportError:
-        raise ImportError('FileDialog module missing. Check your Py3 tkinter installation.')
+        raise ImportError('FileDialog module missing. Check your Py2 Tkinter installation.')
     
 from lxml import etree
 
