@@ -22,7 +22,7 @@
 
 from __future__ import print_function
 
-version = '0.3.0' # using semantic versioning 2.0 model,  added functionality to 0.2.1 in a backwards-compatible manner.
+version = '0.3.1' # using semantic versioning 2.0 model
 
 import os
 import argparse
@@ -278,6 +278,8 @@ class CubeMXImporter(object):
 
     def importCMSIS(self):
         """Import CMSIS package and CMSIS-DEVICE adapter by ST inside the Eclipse project"""
+        cubeMXVersion = 417
+
         srcIncludeDir = os.path.join(self.cubemxprojectpath,
                                      "Drivers/CMSIS/Device/ST/STM32%sxx/Include" % self.HAL_TYPE)
         dstIncludeDir = os.path.join(self.eclipseprojectpath, "system/include/cmsis/device")
@@ -300,7 +302,6 @@ class CubeMXImporter(object):
         self.addCPPIncludes(("../system/include/cmsis/device",))
         self.addAssemblerIncludes(("../system/include/cmsis/device",))
 
-        # locations = ((srcIncludeDir, dstIncludeDir), (srcSourceDir, dstSourceDir))
         locations = ((srcIncludeDir, dstIncludeDir), (srcCMSISIncludeDir, dstCMSISIncludeDir))
 
         for loc in locations:
@@ -309,6 +310,13 @@ class CubeMXImporter(object):
         systemFile = os.path.join(self.cubemxprojectpath,
                                   "Drivers/CMSIS/Device/ST/STM32%sxx/Source/Templates/system_stm32%sxx.c" % (
                                       self.HAL_TYPE, self.HAL_TYPE.lower()))
+
+        if not os.path.exists(systemFile):
+            #CubeMX 4.18 moved the system_stm32XXxx.c file inside the main src folder
+            cubeMXVersion = 418
+            systemFile = os.path.join(self.cubemxprojectpath,
+                                  "Src/system_stm32%sxx.c" % self.HAL_TYPE.lower())
+
         startupFile = os.path.join(self.cubemxprojectpath,
                                    "Drivers/CMSIS/Device/ST/STM32%sxx/Source/Templates/gcc/startup_%s.s" % (
                                        self.HAL_TYPE, self.HAL_MCU_TYPE.lower()))
@@ -322,6 +330,9 @@ class CubeMXImporter(object):
             os.rename(
                 os.path.join(self.eclipseprojectpath, "system/src/cmsis/startup_%s.s" % self.HAL_MCU_TYPE.lower()),
                 os.path.join(self.eclipseprojectpath, "system/src/cmsis/startup_%s.S" % self.HAL_MCU_TYPE.lower()))
+
+            if cubeMXVersion >= 418:
+                os.unlink(os.path.join(self.eclipseprojectpath, "src/system_stm32%sxx.c" % self.HAL_TYPE.lower()))
 
         self.logger.info("Successfully imported CMSIS files")
 
