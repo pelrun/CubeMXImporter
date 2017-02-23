@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Copyright (c) 2015/2016 Carmine Noviello
 #
@@ -22,7 +22,7 @@
 
 from __future__ import print_function
 
-version = '0.3.1' # using semantic versioning 2.0 model
+version = '0.3.2' # using semantic versioning 2.0 model
 
 import os
 import argparse
@@ -320,6 +320,12 @@ class CubeMXImporter(object):
         startupFile = os.path.join(self.cubemxprojectpath,
                                    "Drivers/CMSIS/Device/ST/STM32%sxx/Source/Templates/gcc/startup_%s.s" % (
                                        self.HAL_TYPE, self.HAL_MCU_TYPE.lower()))
+
+        if not os.path.exists(startupFile):
+            #CubeMX 4.19 moved the system_stm32XXxx.s file inside the startup folder
+            cubeMXVersion = 419
+            startupFile = os.path.join(self.cubemxprojectpath,
+                                  "startup/startup_%s.s" % self.HAL_MCU_TYPE.lower())
 
         locations = ((systemFile, dstSourceDir), (startupFile, dstSourceDir))
 
