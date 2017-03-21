@@ -322,7 +322,7 @@ class CubeMXImporter(object):
                                        self.HAL_TYPE, self.HAL_MCU_TYPE.lower()))
 
         if not os.path.exists(startupFile):
-            #CubeMX 4.19 moved the system_stm32XXxx.s file inside the startup folder
+            # CubeMX 4.19 moved the system_stm32XXxx.s file inside the startup folder
             cubeMXVersion = 419
             startupFile = os.path.join(self.cubemxprojectpath,
                                   "startup/startup_%s.s" % self.HAL_MCU_TYPE.lower())
@@ -360,7 +360,7 @@ class CubeMXImporter(object):
 
         if not self.dryrun:
             try:
-                # Try to delete templete files, if generated
+                # Try to delete template files, if generated
                 os.unlink(os.path.join(self.eclipseprojectpath, "system/src/stm32%sxx/stm32%sxx_hal_msp_template.c" % (
                     self.HAL_TYPE.lower(), self.HAL_TYPE.lower())))
                 os.unlink(os.path.join(self.eclipseprojectpath,
@@ -605,8 +605,8 @@ if __name__ == "__main__":
         cubeImporter.resolveDirectoryPath(cubeImporter.cfg_eclipse_lastdir, args.epath), 'Select an eclipse cproject path')
     cubeImporter.cubeMXProjectPath = cubeImporter.askDirectoryPathIfInvalid(cubeImporter.cfg_cubemx_lastpath,
         cubeImporter.resolveDirectoryPath(cubeImporter.cfg_cubemx_lastdir, args.cpath), 'Select a CubeMX project path')
-    cubeImporter.writeUserConfiguration()  # if at that point we write config as no error was found, 
-                                # so that user can reuse dir path or relative dir name later
+    cubeImporter.writeUserConfiguration()   # if at that point we write config as no error was found,
+                                            # so that user can reuse dir path or relative dir name later
     cubeImporter.parseEclipseProjectFile()
     cubeImporter.deleteOriginalEclipseProjectFiles()
     cubeImporter.importApplication()
