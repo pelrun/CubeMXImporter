@@ -514,8 +514,10 @@ exclude from build those uneeded codepage files (cc932.c, etc) not needed for yo
     
     def createUserConfiguration(self):
         """Create INI File configuration"""
+        self.config.add_section('eclipse')
         self.config.set('eclipse','LastEclipseProjectPath','')
         self.config.set('eclipse','LastEclipseProjectDir','')
+        self.config.add_section('cubemx')
         self.config.set('cubemx','LastMXProjectPath','')
         self.config.set('cubemx','LastMXProjectDir','')
         
